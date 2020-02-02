@@ -1,21 +1,19 @@
-
-
 function Invoke-GPG {
-
-
+    cmd /c $(Find-ProgramFiles GnuPG\bin\gpg.exe) $args
 }
 
+Set-Alias -Name Invoke-GnuPG -Value Invoke-GPG
 
-function Get-PublicKeyId {
+function Get-GPGPublicKeyId {
     param (
         [Parameter(Mandatory=$true, ValueFromPipeline=$true)]
-        [Alias("File")]
+        [Alias("File","PublicKeyFile","PublicKey")]
         [ValidateNotNullOrEmpty()]
         [ValidateScript({ Test-Path $(Resolve-Path $_) })]
-        [string] $PublicKeyFile
+        [string] $Path
     )
 
-    $output = gpg --dry-run --import pubkey.asc
+    $output = $(Invoke-GPG --dry-run --import $Path)
 
 # gpg: armor header: Version: GnuPG v2
 
