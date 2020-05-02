@@ -1,26 +1,4 @@
-﻿function StopAndRemoveVM($ComputerName) {
-    $vm = Get-VM -Name $ComputerName -ErrorAction SilentlyContinue
-
-    if ($vm) {
-        if ($vm.state -ne "Off") {
-            $vm | Stop-VM -Force
-        }
-
-        $vm | Remove-VM -Force
-    }
-
-    $vhdx = "$((Get-VMHost).VirtualHardDiskPath)\$ComputerName.vhdx"
-
-    if (Test-Path "$vhdx") {
-        Remove-Item -Confirm -Path $vhdx
-    }
-
-    if (Test-Path "$vhdx") {
-        throw "VHDX File Still Exists! Can't Continue..."
-    }
-}
-
-function LatestIsoFile {
+﻿function LatestIsoFile {
     param (
         [string]$Pattern
     )
@@ -28,7 +6,7 @@ function LatestIsoFile {
     $isoDir = "$((Get-VMHost).VirtualMachinePath)\ISO"
 
     $latest = Get-ChildItem -Path $IsoDir `
-        | Where-Object { $_.Name -match "$($Pattern).*" } `
+        | Where-Object { $_.Name -match "^$($Pattern).*" } `
         | Sort-Object Name -Descending `
         | Select-Object -First 1
 
@@ -82,7 +60,7 @@ function New-LabDomainController {
 
     $netBios = $DomainName.Substring(0, $DomainName.IndexOf('.')).ToUpperInvariant()
 
-    StopAndRemoveVM $ComputerName
+    Uninstall-VirtualMachine $ComputerName
 
     New-DifferencingVHDX -ReferenceDisk "$((Get-VMHost).VirtualHardDiskPath)\Win2016ServerBase.vhdx" `
         -VhdxFile $vhdx
@@ -287,7 +265,7 @@ function New-LabFirewall {
     $ComputerName = $ComputerName.ToUpperInvariant()
     $vhdx = "$ComputerName.vhdx"
 
-    StopAndRemoveVM $ComputerName
+    Uninstall-VirtualMachine $ComputerName
 
     New-VM -Name $ComputerName -MemoryStartupBytes 512MB -NewVHDPath $vhdx -NewVHDSizeBytes 10GB -Generation 2
 
@@ -339,7 +317,20 @@ function New-LabUbuntuServer {
         [switch]$UseDefaultSwitch
     )
 
-    $IsoFilePath = LatestIsoFile "ubuntu-\d"
+    $IsoFilePath = LatestIsoFile "ubuntu-\d.*-server"
+    New-LabVMFromISO -ComputerName $ComputerName -IsoFilePath $IsoFilePath `
+        -UseDefaultSwitch:$UseDefaultSwitch.IsPresent
+}
+
+function New-LabUbuntuMateWorkstation {
+    param (
+        [Parameter(Mandatory=$true)]
+        [ValidateNotNullOrEmpty()]
+        $ComputerName,
+        [switch]$UseDefaultSwitch
+    )
+
+    $IsoFilePath = LatestIsoFile "ubuntu-mate-"
     New-LabVMFromISO -ComputerName $ComputerName -IsoFilePath $IsoFilePath `
         -UseDefaultSwitch:$UseDefaultSwitch.IsPresent
 }
@@ -352,7 +343,7 @@ function New-LabUbuntuWorkstation {
         [switch]$UseDefaultSwitch
     )
 
-    $IsoFilePath = LatestIsoFile "ubuntu-mate-"
+    $IsoFilePath = LatestIsoFile "ubuntu-\d.*-desktop"
     New-LabVMFromISO -ComputerName $ComputerName -IsoFilePath $IsoFilePath `
         -UseDefaultSwitch:$UseDefaultSwitch.IsPresent
 }
@@ -382,7 +373,7 @@ function New-LabVMFromISO {
 
     $vhdx = "$ComputerName.vhdx"
 
-    StopAndRemoveVM $ComputerName
+    Uninstall-VirtualMachine $ComputerName
 
     New-VHD -Path $vhdx -SizeBytes 80GB -Dynamic
 
@@ -391,6 +382,7 @@ function New-LabVMFromISO {
 
     Set-VMMemory -VMName $ComputerName -DynamicMemoryEnabled $true -StartupBytes 1GB
     Set-VMMemory -VMName $ComputerName -MinimumBytes 512MB
+    Set-VM -VMName $ComputerName -EnhancedSessionTransportType HvSocket
 
     Set-VM -Name $ComputerName -AutomaticStartAction Nothing
     Set-VM -Name $ComputerName -AutomaticStopAction Save
@@ -444,7 +436,7 @@ function New-LabWindowsServer {
     $ComputerName = $ComputerName.ToUpperInvariant()
     $vhdx = "$ComputerName.vhdx"
 
-    StopAndRemoveVM $ComputerName
+    Uninstall-VirtualMachine $ComputerName
 
     if ($UseDefaultSwitch) {
         $switch = "Default Switch"
@@ -452,13 +444,13 @@ function New-LabWindowsServer {
         $switch = "LAB"
     }
 
+    Push-Location $((Get-VMHost).VirtualHardDiskPath)
+
     $baseImage = "$((Get-ChildItem -Path "Win2019ServerCoreBase.vhdx").FullName)"
 
     if ($UseDesktopExperience) {
         $baseImage = "$((Get-ChildItem -Path "Win2019ServerBase.vhdx").FullName)"
     }
-
-    Push-Location $((Get-VMHost).VirtualHardDiskPath)
 
     New-DifferencingVHDX -referenceDisk $baseImage -vhdxFile "$vhdx"
 
@@ -523,7 +515,7 @@ function New-LabWindowsWorkstation {
     $vhdx = "$((Get-VMHost).VirtualHardDiskPath)\$ComputerName.vhdx"
     $startLayout = "$($env:SYSTEMDRIVE)\etc\vm\StartScreenLayout.xml"
 
-    StopAndRemoveVM $ComputerName
+    Uninstall-VirtualMachine $ComputerName
 
     if ($UseDefaultSwitch) {
         $Switch = "Default Switch"

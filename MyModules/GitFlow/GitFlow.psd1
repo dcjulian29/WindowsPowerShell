@@ -1,5 +1,5 @@
 @{
-    ModuleVersion = '2020.1.30.1'
+    ModuleVersion = '2020.2.23.1'
     GUID = '4f41eba3-297c-4908-a686-d92063e79122'
     Author = 'Julian Easterling'
     PowerShellVersion = '3.0'
@@ -10,7 +10,11 @@
     FunctionsToExport = @(
         "Initialize-GitFlow"
         "Pop-GitFlowFeature"
+        "Pop-GitFlowHotfix"
         "Publish-GitFlowFeature"
+        "Publish-GitFlowHotfix"
+        "Remove-GitFlowFeature"
+        "Remove-GitFlowRelease"
         "Start-GitFlowFeature"
         "Start-GitFlowHotfix"
         "Start-GitFlowRelease"
@@ -20,11 +24,18 @@
         "Update-GitFlowFeature"
     )
     AliasesToExport = @(
+        "Abort-GitFlowFeature"
+        "Abort-GitFlowRelease"
         "Finish-GitFlowFeature"
+        "Finish-GitFlowHotfix"
         "Finish-GitFlowRelease"
-        "gffff"
+        "gfff"
         "gffs"
+        "gfhs"
+        "gfhf"
         "gfrf"
         "gfrs"
+        "Pull-GitFlowFeature"
+        "Pull-GitFlowHotfix"
     )
 }

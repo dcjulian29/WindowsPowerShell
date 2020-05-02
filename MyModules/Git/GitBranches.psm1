@@ -25,3 +25,45 @@ function Get-GitRepositoryBranch {
 
     cmd /c """$(Find-Git)"" $parameters"
 }
+
+function Merge-GitRepository {
+    param (
+        [string]$Path = $pwd,
+        [Parameter(Mandatory=$true)]
+        [string]$SourceBranch,
+        [Parameter(Mandatory=$true)]
+        [string]$DestinationBranch,
+        [switch]$Push
+    )
+
+    Update-GitRepository -Repository $Path -Branches @($SourceBranch, $DestinationBranch)
+
+    $directory = (Get-Item (Resolve-Path $Path))
+
+    if ($pwd.Path -ne $directory.FullName) {
+        Push-Location $directory.FullName
+        $startedOutside = $true
+    }
+
+    $current = Get-GitRepositoryBranch
+
+    if ($current -ne $DestinationBranch) {
+        & "$(Find-Git)" checkout $DestinationBranch
+    }
+
+    Write-Output "Merging $SourceBranch to $DestinationBranch..."
+    & "$(Find-Git)" --no-optional-locks merge --no-ff $SourceBranch
+
+    if ($Push) {
+        Write-Output "Pushing merge (if any) to origin..."
+        & "$(Find-Git)" --no-optional-locks push -v --tags origin ${DestinationBranch}:$DestinationBranch
+    }
+
+    if ($current -ne $DestinationBranch) {
+        & "$(Find-Git)" checkout $current
+    }
+
+    if ($startedOutside) {
+        Pop-Location
+    }
+}

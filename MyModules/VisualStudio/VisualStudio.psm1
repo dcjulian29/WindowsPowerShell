@@ -1,14 +1,14 @@
 ﻿function Find-VisualStudio {
     First-Path `
-        (Find-ProgramFiles 'Microsoft Visual Studio\2019\Enterprise\Common7\IDE\VSIXInstaller.exe') `
-        (Find-ProgramFiles 'Microsoft Visual Studio\2019\Professional\Common7\IDE\VSIXInstaller.exe') `
-        (Find-ProgramFiles 'Microsoft Visual Studio\2019\Community\Common7\IDE\VSIXInstaller.exe') `
-        (Find-ProgramFiles 'Microsoft Visual Studio\2017\Enterprise\Common7\IDE\VSIXInstaller.exe') `
-        (Find-ProgramFiles 'Microsoft Visual Studio\2017\Professional\Common7\IDE\VSIXInstaller.exe') `
-        (Find-ProgramFiles 'Microsoft Visual Studio\2017\Community\Common7\IDE\VSIXInstaller.exe') `
-        (Find-ProgramFiles 'Microsoft Visual Studio 15.0\Common7\IDE\VSIXInstaller.exe') `
-        (Find-ProgramFiles 'Microsoft Visual Studio 14.0\Common7\IDE\VSIXInstaller.exe') `
-        (Find-ProgramFiles 'Microsoft Visual Studio 12.0\Common7\IDE\VSIXInstaller.exe')
+        (Find-ProgramFiles 'Microsoft Visual Studio\2019\Enterprise\Common7\IDE\devenv.exe') `
+        (Find-ProgramFiles 'Microsoft Visual Studio\2019\Professional\Common7\IDE\devenv.exe') `
+        (Find-ProgramFiles 'Microsoft Visual Studio\2019\Community\Common7\IDE\devenv.exe') `
+        (Find-ProgramFiles 'Microsoft Visual Studio\2017\Enterprise\Common7\IDE\devenv.exe') `
+        (Find-ProgramFiles 'Microsoft Visual Studio\2017\Professional\Common7\IDE\devenv.exe') `
+        (Find-ProgramFiles 'Microsoft Visual Studio\2017\Community\Common7\IDE\devenv.exe') `
+        (Find-ProgramFiles 'Microsoft Visual Studio 15.0\Common7\IDE\devenv.exe') `
+        (Find-ProgramFiles 'Microsoft Visual Studio 14.0\Common7\IDE\devenv.exe') `
+        (Find-ProgramFiles 'Microsoft Visual Studio 12.0\Common7\IDE\devenv.exe')
 }
 
 function Find-VisualStudioSolutions {
@@ -55,6 +55,57 @@ function Find-VSIX {
         (Find-ProgramFiles 'Microsoft Visual Studio 14.0\Common7\IDE\VSIXInstaller.exe') `
         (Find-ProgramFiles 'Microsoft Visual Studio 12.0\Common7\IDE\VSIXInstaller.exe')
 }
+
+function Find-VSVars {
+    First-Path `
+        (Find-ProgramFiles 'Microsoft Visual Studio\2019\Enterprise\Common7\Tools\VsDevCmd.bat') `
+        (Find-ProgramFiles 'Microsoft Visual Studio\2019\Professional\Common7\Tools\VsDevCmd.bat') `
+        (Find-ProgramFiles 'Microsoft Visual Studio\2019\Community\Common7\Tools\VsDevCmd.bat') `
+        (Find-ProgramFiles 'Microsoft Visual Studio\2017\Enterprise\Common7\Tools\VsDevCmd.bat') `
+        (Find-ProgramFiles 'Microsoft Visual Studio\2017\Professional\Common7\Tools\VsDevCmd.bat') `
+        (Find-ProgramFiles 'Microsoft Visual Studio\2017\Community\Common7\Tools\VsDevCmd.bat')
+}
+
+Set-Alias Find-VisualStudioVariables Find-VSVars
+
+function Get-VSVars {
+    if ($global:VSVariables) {
+        return $global:VSVariables
+    }
+
+    $vsvar = Find-VSVars
+    $environment = @{}
+
+    if ($vsvar) {
+        $cmd = "`"$vsvar`" >nul & set"
+
+        cmd /c $cmd | ForEach-Object {
+            $p, $v = $_.Split('=')
+            if (-not ($p.StartsWith('_'))) {
+                if (-not (Test-Path "env:$p")) {
+                    $environment.$p = $v
+                }
+            }
+        }
+    }
+
+    $global:VSVariables = $environment
+
+    return $global:VSVariables
+}
+
+function Set-VSVars {
+    $enviornment = Get-VSVars
+
+    $enviornment.Keys | ForEach-Object {
+        Set-Item -Path "env:$_" -Value $enviornment[$_]
+    }
+}
+
+Set-Alias Register-VisualStudioVariables Set-VsVars
+Set-Alias Register-VSVariables Set-VsVars
+Set-Alias vsvars32 Set-VsVars
+Set-Alias VSVariables Set-VsVars
 
 function Start-VisualStudio {
     param (
